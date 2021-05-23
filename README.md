@@ -94,7 +94,7 @@ We present a more expanded description of the variables in the following:
 2. -O OBSERVEDSAMPLE, --observedsample OBSERVEDSAMPLE : This file contains the set of observed SNPs in tab-delimited format (no header should be included) with columns of 
    >```Chromosome_Number Genome_Position Genome_Position Alternate_Allele Observed_Genotype (if POSSPECIFIC=True)Alternative_Genotype_1:Probability of Observing this Genotype (if POSSPECIFIC=True)Alternative_Genotype_2:Probability of Observing this Genotype```
    
-    For example, let us assume we have a query SNP from chromosome 5 at position 33951693, with an observed alternate allele of ```G``` and called genotype of ```1```. If the user chooses to pass a position-specific error rate (as indicated by the ```POSSPECIFIC``` flag described below), with ```98%``` probability of the called genotype and ```2%``` probability of a genoptype ```2```, they would enter the line as 
+    For example, let us assume we have a query SNP from chromosome 5 at position 33951693, with an observed alternate allele of ```G``` and called genotype of ```1```. If the user chooses to pass a position-specific error rate (as indicated by the ```POSSPECIFIC``` flag described below), with ```98%``` probability of the called genotype and ```2%``` probability of a genotype ```2```, they would enter the line as 
    >```5       33951693        33951693        G       1       0:0.0   2:0.02```
   
    Note that in this example, the genotype of ```0``` is thought to have ```0``` probability, and all the probabilities sum to 1.
