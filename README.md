@@ -10,7 +10,7 @@ Inspired by imputation methods such as *IMPUTE2* [[1]](#1) and *Eagle* [[2]](#2)
 For further details about the method and application cases, please refer to:
 > Emani, P.S.; Gürsoy, G.; Miranker, A.; Gerstein, M.B. PLIGHT: A tool to assess privacy risk by inferring identifying characteristics from sparse, noisy genotypes. **2021** *biorxiv* **TBD**
 
-## Code Usage
+## Code Description
 The code is written in Python 3, and consists of a set of three algorithms with special use cases:
 1. **PLIGHT_Exact** performs the exact HMM inference process using the Viterbi algorithm [[4]](#4);
 2. **PLIGHT_Truncated** phases in a process of truncating the set of all calculated trajectories to only those within a certain probability distance from the maximally optimal ones, resulting in a smaller memory footprint;
@@ -89,7 +89,7 @@ PLIGHT_Iterative.py
 --subgroup SUBGROUP   Number of haplotypes in each iterative scheme subgroup
 --niter NITER         Number of iterations of bootstrapping process
 ```
-We present a more expanded description of the variables in the following:
+## Explanation of the parameters
 1. -c CHROMOSOMEFILE, --chromosomefile CHROMOSOMEFILE : This is the name of the reference database vcf file, either a composite of all chromosomes or separated out by chromosome; note that the code only runs the model for a singl chromosome at a time, unless using the wrapper script (described below). 
 2. -O OBSERVEDSAMPLE, --observedsample OBSERVEDSAMPLE : This file contains the set of observed SNPs in tab-delimited format (no header should be included) with columns of 
    >```Chromosome_Number Genome_Position Genome_Position Alternate_Allele Observed_Genotype (if POSSPECIFIC=True)Alternative_Genotype_1:Probability of Observing this Genotype (if POSSPECIFIC=True)Alternative_Genotype_2:Probability of Observing this Genotype```
@@ -117,6 +117,7 @@ We present a more expanded description of the variables in the following:
 17. --subgroup SUBGROUP (**Only in PLIGHT_Iterative**): Number of haplotypes in each iterative scheme subgroup, where the subgroups are defined as the partitions into which the overall reference haplotype set is divided for the **PLIGHT_Iterative** run.
 18. --niter NITER (**Only in PLIGHT_Iterative**): Number of iterations of bootstrapping process. The default is 20, though values of 30 were also considered in the paper.
 
+## Example run
 An example of one run of the code for the 1000 Genomes Phase 3 reference database is:
 ```
 python3 PLIGHT_Iterative.py --metadata integrated_call_samples_v3.20130502.ALL.panel --genfolder Genotypes/ --mutationrate 0.1 --effpop 11418 --refpop 2504 --recombrate 0.5 --recombswitch distance --tolerance 0.01 --currdir ./ --affilter 0.05 --numproc 20 --subgroup 300 --niter 1 --posspecific False -c ALL.chr3.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O chr3_Observed_SNPs.txt --chromosomeID chr3 --prefix Mutrate0.1_Subgroup300
