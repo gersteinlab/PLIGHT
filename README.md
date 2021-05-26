@@ -19,8 +19,8 @@ The code is written in Python 3, and consists of a set of three algorithms with 
 
 The following external programs employed by the algorithms and need to be installed before running the code:
 ```
-bcftools
-tabix
+bcftools (version 1.10.2)
+tabix (version 1.11)
 ```
 Some of the libraries/modules required in the corresponding Python scripts are:
 ```
