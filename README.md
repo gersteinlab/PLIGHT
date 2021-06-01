@@ -55,8 +55,10 @@ optional arguments:
                         Metadata file with ancestry information
   -F GENFOLDER, --genfolder GENFOLDER
                         Genotype folder
-  -M MUTATIONRATE, --mutationrate MUTATIONRATE
-                        Mutation rate
+  -M THETAMUTATIONRATE, --thetamutationrate THETAMUTATIONRATE
+                        Theta (Coalescent) Mutation rate
+  -L LAMBDAMUTATIONRATE, --lambdamutationrate LAMBDAMUTATIONRATE
+                        Lambda (direct error) Mutation rate
   -e EFFPOP, --effpop EFFPOP
                         Effective population
   -r REFPOP, --refpop REFPOP
@@ -75,7 +77,6 @@ optional arguments:
                         inclusion of a path
   -C CURRDIR, --currdir CURRDIR
                         Current working directory
-  --affilter AFFILTER   Allele Frequency Filter
   --numproc NUMPROC     Number of processes for parallelization
   --posspecific POSSPECIFIC
                         Position-specific mutation rates included in
@@ -95,8 +96,11 @@ PLIGHT_Iterative.py
 --subgroup SUBGROUP   Number of haplotypes in each iterative scheme subgroup
 --niter NITER         Number of iterations of bootstrapping process
 ```
+
+In the case of ```PLIGHT_InRef.py```, the recombination rate parameters are all ignored.
+
 ## Explanation of the parameters
-1. -c CHROMOSOMEFILE, --chromosomefile CHROMOSOMEFILE : This is the name of the reference database vcf file, either a composite of all chromosomes or separated out by chromosome; note that the code only runs the model for a singl chromosome at a time, unless using the wrapper script (described below). 
+1. -c CHROMOSOMEFILE, --chromosomefile CHROMOSOMEFILE : This is the name of the reference database vcf file, either a composite of all chromosomes or separated out by chromosome; note that the code only runs the model for a single chromosome at a time. 
 2. -O OBSERVEDSAMPLE, --observedsample OBSERVEDSAMPLE : This file contains the set of observed SNPs in tab-delimited format (no header should be included) with columns of 
    >```Chromosome_Number Genome_Position Genome_Position Alternate_Allele Observed_Genotype (if POSSPECIFIC=True)Alternative_Genotype_1:Probability of Observing this Genotype (if POSSPECIFIC=True)Alternative_Genotype_2:Probability of Observing this Genotype```
    
@@ -108,25 +112,27 @@ PLIGHT_Iterative.py
 3.  -I CHROMOSOMEID, --chromosomeID CHROMOSOMEID : This is the chromosome being analyzed, with the format 'chr\<Chromosome Number\>'. This is appended as a prefix to the output files.
 
 4. -F GENFOLDER, --genfolder GENFOLDER : Folder location of the reference genotype vcf file, with a trailing '/' character
-5. -M THETAMUTATIONRATE, --thetamutationrate MUTATIONRATE : This is the mutation rate per haplotype as used in the coalescent model. The resulting mutation rate ```lambda``` at a particular location is given by ```lambda = theta/(2(N + theta))``` where ```N``` is the number of reference haplotypes. The option exists to omit this and directly pass the value for ```lambda```.
-6. -e EFFPOP, --effpop EFFPOP : Effective size of the human population. Default value = 11,418 [[3]](#3).
-7. -r REFPOP, --refpop REFPOP : Size of the reference population, i.e. the number of genotypes in the reference database (not the number of haplotypes).
-8. -s {distance,custom}, --recombswitch {distance,custom} : Choose whether to use a linear growth in recombination rate with genomic distance, or a custom file of recombination values. If ```custom``` is chosen, provide a file for the recombination rate between adjacent SNPs (for L SNPs, there will be L-1 such recombination values).
-9. -b RECOMBRATE, --recombrate RECOMBRATE : If the ```distance``` option is chosen for the ```-s``` flag, then provide the recombination rate in ```cM/Mb```, i.e. centimorgans/Megabase. In the paper, we mainly used a value of 0.5 cM/Mb. This is set as the default value.
-10. -f RECOMBFILE, --recombfile RECOMBFILE : If the ```custom``` option is chosen for the ```-s``` flag, provide the name of the file here. In the ```distance``` option, each value is set to ```4 * Effective Population Size * distance in Mb * Recombination rate in cM/Mb```. Thus, in the ```custom``` case, the user should set each recombination values between loci L and L+1 to ```4 * Effective Population Size * distance in cM between loci L and L+1```.
-11. -t TOLERANCE, --tolerance TOLERANCE : This is the tolerance factor that determines the cutoff for the sub-optimal paths to be included. That is, if the score of the best-fit trajectory is ```S```, all paths with a score ```S - TOLERANCE*S``` will be included. For the analyses in the paper, we chose a tolerance of 0.01. This is set as the default value.
-12. -C CURRDIR, --currdir CURRDIR : The current working directory to run the code. The default is set to './'.
-13. --numproc NUMPROC : Number of processes for parallelization. The more the merrier. The default is set to 1.
-14. --posspecific POSSPECIFIC : Are position-specific mutation rates included in observation file? (True/False). The default is 'False'.
-15. --prefix PREFIX : String prefix to append to output Best_trajectories file, in addition to chromosome number. The default is '' (empty string).
-16. --truncation TRUNCATION (**Only in PLIGHT_Truncated**): Fraction of trajectories carried forward from each step, after the phase-in period (see Supplementary Methods of the **PLIGHT** paper.
-17. --subgroup SUBGROUP (**Only in PLIGHT_Iterative**): Number of haplotypes in each iterative scheme subgroup, where the subgroups are defined as the partitions into which the overall reference haplotype set is divided for the **PLIGHT_Iterative** run.
-18. --niter NITER (**Only in PLIGHT_Iterative**): Number of iterations of bootstrapping process. The default is 20, though values of 30 were also considered in the paper.
+5. -M THETAMUTATIONRATE, --thetamutationrate MUTATIONRATE : This is the mutation rate per haplotype as used in the coalescent model. The resulting mutation rate ```lambda``` at a particular site is given by ```lambda = theta/(2(N + theta))``` where ```N``` is the number of reference haplotypes. The option exists to omit this and directly pass the value for ```lambda```.
+6. -L LAMBDAMUTATIONRATE, --lambdamutationrate LAMBDAMUTATIONRATE : This is the ```lambda``` (direct error) Mutation rate. If the user intends to associate a general error rate due to genotyping or the possibility of *de novo* mutation at any site without reference to the coalescent model, this is the parameter to set.
+7. Note about mutation rates: In the absence of both the mutation rate parameters and when the ```posspecific``` parameter (see below) is set to ```False```, the mutation rates are set as follows: ```thetamutrate = (sum(1.0/i for i in range(1,2*refpop-1)))**(-1); lambdamutrate = 0.5*mutrate/(mutrate + 2*refpop)```. If ```posspecific=True```, the above mutation rate parameters are ignored, and the position-specific mutation rates in the observed sample file are used.
+9. -e EFFPOP, --effpop EFFPOP : Effective size of the human population. Default value = 11,418 [[3]](#3).
+10. -r REFPOP, --refpop REFPOP : Size of the reference population, i.e. the number of genotypes in the reference database (not the number of haplotypes).
+11. -s {distance,custom}, --recombswitch {distance,custom} : Choose whether to use a linear growth in recombination rate with genomic distance, or a custom file of recombination values. If ```custom``` is chosen, provide a file for the recombination rate between adjacent SNPs (for L SNPs, there will be L-1 such recombination values).
+12. -b RECOMBRATE, --recombrate RECOMBRATE : If the ```distance``` option is chosen for the ```-s``` flag, then provide the recombination rate in ```cM/Mb```, i.e. centimorgans/Megabase. In the paper, we mainly used a value of 0.5 cM/Mb. This is set as the default value.
+13. -f RECOMBFILE, --recombfile RECOMBFILE : If the ```custom``` option is chosen for the ```-s``` flag, provide the name of the file here. In the ```distance``` option, each value is set to ```4 * Effective Population Size * distance in Mb * Recombination rate in cM/Mb```. Thus, in the ```custom``` case, the user should set each recombination values between loci L and L+1 to ```4 * Effective Population Size * distance in cM between loci L and L+1```.
+14. -t TOLERANCE, --tolerance TOLERANCE : This is the tolerance factor that determines the cutoff for the sub-optimal paths to be included. That is, if the score of the best-fit trajectory is ```S```, all paths with a score ```S - TOLERANCE*S``` will be included. For the analyses in the paper, we chose a tolerance of 0.01. This is set as the default value.
+15. -C CURRDIR, --currdir CURRDIR : The current working directory to run the code. The default is set to './'.
+16. --numproc NUMPROC : Number of processes for parallelization. The more the merrier. The default is set to 1.
+17. --posspecific POSSPECIFIC : Are position-specific mutation rates included in observation file? (True/False). The default is 'False'.
+18. --prefix PREFIX : String prefix to append to output Best_trajectories file, in addition to chromosome number. The default is '' (empty string).
+19. --truncation TRUNCATION (**Only in PLIGHT_Truncated**): Fraction of trajectories carried forward from each step, after the phase-in period (see Supplementary Methods of the **PLIGHT** paper.
+20. --subgroup SUBGROUP (**Only in PLIGHT_Iterative**): Number of haplotypes in each iterative scheme subgroup, where the subgroups are defined as the partitions into which the overall reference haplotype set is divided for the **PLIGHT_Iterative** run.
+21. --niter NITER (**Only in PLIGHT_Iterative**): Number of iterations of bootstrapping process. The default is 20, though values of 30 were also considered in the paper.
 
 ## Example run
 An example of one run of the code for the 1000 Genomes Phase 3 reference database is:
 ```
-python3 PLIGHT_Iterative.py --metadata integrated_call_samples_v3.20130502.ALL.panel --genfolder Genotypes/ --mutationrate 0.1 --effpop 11418 --refpop 2504 --recombrate 0.5 --recombswitch distance --tolerance 0.01 --currdir ./ --affilter 0.05 --numproc 20 --subgroup 300 --niter 1 --posspecific False -c ALL.chr3.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O chr3_Observed_SNPs.txt --chromosomeID chr3 --prefix Mutrate0.1_Subgroup300
+python3 PLIGHT_Iterative.py --metadata integrated_call_samples_v3.20130502.ALL.panel --genfolder Genotypes/ --lambdamutationrate 0.1 --effpop 11418 --refpop 2504 --recombrate 0.5 --recombswitch distance --tolerance 0.01 --currdir ./ --numproc 20 --subgroup 300 --niter 1 --posspecific False -c ALL.chr3.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O chr3_Observed_SNPs.txt --chromosomeID chr3 --prefix Mutrate0.1_Subgroup300
 ```
 
 ## References
