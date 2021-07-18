@@ -134,6 +134,36 @@ An example of one run of the code for the 1000 Genomes Phase 3 reference databas
 ```
 python3 PLIGHT_Iterative.py --metadata integrated_call_samples_v3.20130502.ALL.panel --genfolder Genotypes/ --lambdamutationrate 0.1 --effpop 11418 --refpop 2504 --recombrate 0.5 --recombswitch distance --tolerance 0.01 --currdir ./ --numproc 20 --subgroup 300 --niter 1 --posspecific False -c ALL.chr3.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O chr3_Observed_SNPs.txt --chromosomeID chr3 --prefix Mutrate0.1_Subgroup300
 ```
+## PLIGHT_Vis
+The **PLIGHT_Vis** module carries out downstream analyses on the output of the HMM algorithms. This includes plotting the trajectories, and calculating the optimal haplotypes for each chromosome, as well as across all chromosomes under consideration. The help menu is as follows:
+
+```
+usage: PLIGHT_Vis.py [-h] [-C CHROMOSOMEIDS [CHROMOSOMEIDS ...]]
+                     [-t TRAJECTORYPATTERN] [-T TRAJECTORYFOLDER]
+                     [-P PLOTFOLDER]
+
+Unravel the trajectories, find the identities of the best-fit reference
+haplotypes, and plot the results
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -C CHROMOSOMEIDS [CHROMOSOMEIDS ...], --chromosomeIDs CHROMOSOMEIDS [CHROMOSOMEIDS ...]
+                        List of Chromosome IDs to be considered: format chr
+                        followed by number, listed singly, separated by spaces
+                        (for eg. -C chr1 chr2 chr19)
+  -t TRAJECTORYPATTERN, --trajectorypattern TRAJECTORYPATTERN
+                        Pattern for trajectory files, where the chromosome ID
+                        would fit into the curly braces
+  -T TRAJECTORYFOLDER, --trajectoryfolder TRAJECTORYFOLDER
+                        Folder for storing the trajectory files
+  -P PLOTFOLDER, --plotfolder PLOTFOLDER
+                        Folder for storing the plots
+```
+
+An example of running **PLIGHT_Vis** is provided below:
+```
+python3 PLIGHT_Vis.py -C chr3 chr6 -t InRef_{}_Best_trajectories.tsv -T Trajectories -P HMM_Plots
+```
 
 ## References
 <a id="1">[1]</a>
