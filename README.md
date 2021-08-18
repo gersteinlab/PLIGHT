@@ -8,7 +8,37 @@
 Inspired by imputation methods such as *IMPUTE2* [[1]](#1) and *Eagle* [[2]](#2), the inference procedure in **PLIGHT** is based on the Li-Stephens model [[3]](#3), where an HMM is used to explore the space of underlying pairs of haplotypes in a diploid genome with the possibility of de novo mutations and recombination between haplotypes. A solution to the inference problem consists of a set of best-fit haplotype pairs at each observed locus, each pair being linked to another pair at the next locus, to form a set of piecewise matches to reference haplotypes. If multiple equally likely solutions exist, the method identifies all of them.  Collectively, these form a set of genotypic trajectories through reference haplotype space, where a trajectory is defined as a sequence of reference haplotype pairs (for a diploid genome) at each locus that best fit the observations.
 
 For further details about the method and application cases, please refer to:
-> Emani, P.S.; Gürsoy, G.; Miranker, A.; Gerstein, M.B. PLIGHT: A tool to assess privacy risk by inferring identifying characteristics from sparse, noisy genotypes. **2021** *biorxiv* **TBD**
+> Emani, P.S.; Gürsoy, G.; Miranker, A.; Gerstein, M.B. PLIGHT: A tool to assess privacy risk by inferring identifying characteristics from sparse, noisy genotypes. **2021** *biorxiv* **doi:** https://doi.org/10.1101/2021.07.18.452853
+
+## Software Requirements
+### OS requirements
+We tested the code in the Red Hat Enterprise Linux Server 7.9 (Maipo) environment. We have tested the batch job submission using the Slurm job handler. An example of a Slurm script for submission is included. We highly recommend the deployment of multiple CPUs in a job, as the code is designed to parallelize the HMM optimization.
+
+### External Dependencies
+The following external programs employed by the algorithms and need to be installed before running the code:
+```
+bcftools (version 1.10.2)
+tabix (version 1.11)
+```
+
+### Python Requirements
+The libraries/modules required in the corresponding Python scripts are:
+```
+numpy (several versions work, we have used 1.18 and 1.19 at different stages of development)
+subprocess
+gzip
+mmap
+multiprocessing
+```
+## Installation guide
+```
+git clone https://github.com/gersteinlab/PLIGHT.git
+```
+
+## External data used in manuscript 
+1000 Genomes Consortium, ftp site:[ http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/]
+(29) 	1000 Genomes Phase 3 Related Samples Panel ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/related_samples_vcf/related_samples_panel.20140910.ALL.panel.
+(30) 	1000 Genomes Phase 3 related individuals pedigree file ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
 
 ## Code Description
 The code is written in Python 3, and consists of a set of three algorithms with special use cases:
@@ -17,19 +47,6 @@ The code is written in Python 3, and consists of a set of three algorithms with 
 3. **PLIGHT_Truncated** phases in a process of truncating the set of all calculated trajectories to only those within a certain probability distance from the maximally optimal ones, resulting in a smaller memory footprint;
 4. **PLIGHT_Iterative** iteratively partitions the reference search space into more manageable blocks of haplotypes and runs **PLIGHT_Exact** on each block, followed by pooling and repetition of the scheme on the resulting, smaller cohort of haplotypes.
 
-The following external programs employed by the algorithms and need to be installed before running the code:
-```
-bcftools (version 1.10.2)
-tabix (version 1.11)
-```
-Some of the libraries/modules required in the corresponding Python scripts are:
-```
-numpy (several versions work, we have used 1.18 and 1.19 at different stages of development)
-subprocess
-gzip
-mmap
-multiprocessing
-```
 
 Below is an example of all the arguments that can be passed to the PLIGHT_Exact module:
 
