@@ -36,16 +36,16 @@ git clone https://github.com/gersteinlab/PLIGHT.git
 ```
 
 ## External data used in manuscript 
-1000 Genomes Consortium, ftp site:[ http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/]
-(29) 	1000 Genomes Phase 3 Related Samples Panel ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/related_samples_vcf/related_samples_panel.20140910.ALL.panel.
-(30) 	1000 Genomes Phase 3 related individuals pedigree file ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
+1. The genotype vcf files used as the reference database can be downloaded from the 1000 Genomes Consortium: http://hgdownload.cse.ucsc.edu/gbdb/hg19/1000Genomes/phase3/
+2. The identification of related individuals is based on the 1000 Genomes Phase 3 Related Samples Panel: https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/related_samples_vcf/related_samples_panel.20140910.ALL.panel.
+3. 1000 Genomes Phase 3 related individuals pedigree file https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
 
 ## Code Description
 The code is written in Python 3, and consists of a set of three algorithms with special use cases:
 1. **PLIGHT_Exact** performs the exact HMM inference process using the Viterbi algorithm [[4]](#4);
     - **PLIGHT_InRef** is a specific individual-in-the-reference-database instance of **PLIGHT_Exact**, where the recombination rate is set to 0; that is, all SNPs are assumed to belong to one individual, and the most likely individual(s) in the reference database is(are) found.
-3. **PLIGHT_Truncated** phases in a process of truncating the set of all calculated trajectories to only those within a certain probability distance from the maximally optimal ones, resulting in a smaller memory footprint;
-4. **PLIGHT_Iterative** iteratively partitions the reference search space into more manageable blocks of haplotypes and runs **PLIGHT_Exact** on each block, followed by pooling and repetition of the scheme on the resulting, smaller cohort of haplotypes.
+2. **PLIGHT_Truncated** phases in a process of truncating the set of all calculated trajectories to only those within a certain probability distance from the maximally optimal ones, resulting in a smaller memory footprint;
+3. **PLIGHT_Iterative** iteratively partitions the reference search space into more manageable blocks of haplotypes and runs **PLIGHT_Exact** on each block, followed by pooling and repetition of the scheme on the resulting, smaller cohort of haplotypes.
 
 
 Below is an example of all the arguments that can be passed to the PLIGHT_Exact module:
@@ -181,6 +181,12 @@ An example of running **PLIGHT_Vis** is provided below:
 ```
 python3 PLIGHT_Vis.py -C chr3 chr6 -t InRef_{}_Best_trajectories.tsv -T Trajectories -P HMM_Plots
 ```
+## Example data included
+### Inputs
+We include examples of input SNP lists for both cases of (a) non-position-specific and (b) position-specific mutation rates. See the parameter descriptions above for explanations on how these two input files differ.
+
+### Outputs
+We provide examples of the best-fit trajectories files produced by the algorithms, where each line represents the pointer from the best-fit pair of haplotypes at the previous query SNP to the corresponding best-fit pair(s) at the current query SNP. Multiple possible best-fit pairs of haplotypes at the current query SNP are separated by semi-colons. The query SNPs are shown in reverse order as this is the manner in which the Viterbi algorithm identifies the optimal trajectories.
 
 ## References
 <a id="1">[1]</a>
