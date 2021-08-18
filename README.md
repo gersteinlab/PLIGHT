@@ -22,7 +22,7 @@ tabix (version 1.11)
 ```
 
 ### Python Requirements
-The libraries/modules required in the corresponding Python scripts are:
+All algorithms are written in Python 3, and the libraries/modules required in the corresponding Python scripts are:
 ```
 numpy (several versions work, we have used 1.18 and 1.19 at different stages of development)
 subprocess
@@ -34,14 +34,22 @@ multiprocessing
 ```
 git clone https://github.com/gersteinlab/PLIGHT.git
 ```
+The typical install time of PLIGHT itself is less than a minute. The dependencies will take longer to install, depending on the current configuration of the user's Python installation.
 
 ## External data used in manuscript 
 1. The genotype vcf files used as the reference database can be downloaded from the 1000 Genomes Consortium: http://hgdownload.cse.ucsc.edu/gbdb/hg19/1000Genomes/phase3/
 2. The identification of related individuals is based on the 1000 Genomes Phase 3 Related Samples Panel: https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/related_samples_vcf/related_samples_panel.20140910.ALL.panel.
 3. 1000 Genomes Phase 3 related individuals pedigree file https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
 
+## Run times and memory requirements
+Typical run times for each algorithm:
+**PLIGHT_Exact**: ~20 minutes for 30 SNPs with 400 reference haplotypes on 12 cores.
+**PLIGHT_InRef**: ~ A few seconds for 30 SNPs with up to ~5,000 reference haplotypes on 12 cores.
+**PLIGHT_Truncated**: ~1 hour for 30 SNPs with 400 reference haplotypes on 12 cores.
+**PLIGHT_Iterative**: Several hours/a few days for 20-30 iterations, 30 SNPs with ~5,000 reference haplotypes on 12 cores. The variability depends on the number of bootstrapping iterations and the degree to which a small number of optimal trajectories have been selected. *For cases of many very common SNPs or where there is no significantly optimal trajectory, the code may not finish running in a reasonable amount of time. This is because at each step the backtrace will point to many possible haplotype pairs, and accounting for all of them is time- and memory-intensive.*
+
 ## Code Description
-The code is written in Python 3, and consists of a set of three algorithms with special use cases:
+The code consists of a set of three algorithms with special use cases:
 1. **PLIGHT_Exact** performs the exact HMM inference process using the Viterbi algorithm [[4]](#4);
     - **PLIGHT_InRef** is a specific individual-in-the-reference-database instance of **PLIGHT_Exact**, where the recombination rate is set to 0; that is, all SNPs are assumed to belong to one individual, and the most likely individual(s) in the reference database is(are) found.
 2. **PLIGHT_Truncated** phases in a process of truncating the set of all calculated trajectories to only those within a certain probability distance from the maximally optimal ones, resulting in a smaller memory footprint;
