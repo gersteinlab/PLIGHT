@@ -44,8 +44,11 @@ The typical install time of PLIGHT itself is less than a minute. The dependencie
 ## Run times and memory requirements
 Typical run times for each algorithm:
 **PLIGHT_Exact**: ~20 minutes for 30 SNPs with 400 reference haplotypes on 12 cores.
+
 **PLIGHT_InRef**: ~ A few seconds for 30 SNPs with up to ~5,000 reference haplotypes on 12 cores.
+
 **PLIGHT_Truncated**: ~1 hour for 30 SNPs with 400 reference haplotypes on 12 cores.
+
 **PLIGHT_Iterative**: Several hours/a few days for 20-30 iterations, 30 SNPs with ~5,000 reference haplotypes on 12 cores. The variability depends on the number of bootstrapping iterations and the degree to which a small number of optimal trajectories have been selected. *For cases of many very common SNPs or where there is no significantly optimal trajectory, the code may not finish running in a reasonable amount of time. This is because at each step the backtrace will point to many possible haplotype pairs, and accounting for all of them is time- and memory-intensive.*
 
 ## Code Description
@@ -194,7 +197,7 @@ python3 PLIGHT_Vis.py -C chr3 chr6 -t InRef_{}_Best_trajectories.tsv -T Trajecto
 We include examples of input SNP lists for both cases of (a) non-position-specific and (b) position-specific mutation rates. See the parameter descriptions above for explanations on how these two input files differ.
 
 ### Outputs
-We provide examples of the best-fit trajectories files produced by the algorithms, where each line represents the pointer from the best-fit pair of haplotypes at the previous query SNP to the corresponding best-fit pair(s) at the current query SNP. Multiple possible best-fit pairs of haplotypes at the current query SNP are separated by semi-colons. The query SNPs are shown in reverse order as this is the manner in which the Viterbi algorithm identifies the optimal trajectories.
+We provide an example of the best-fit trajectories files produced by the algorithms, where each line represents the pointer from the best-fit pair of haplotypes at the previous query SNP to the corresponding best-fit pair(s) at the current query SNP. Multiple possible best-fit pairs of haplotypes at the current query SNP are separated by semi-colons. The query SNPs are shown in reverse order as this is the manner in which the Viterbi algorithm identifies the optimal trajectories.
 
 ## References
 <a id="1">[1]</a>
