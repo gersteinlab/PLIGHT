@@ -192,6 +192,83 @@ An example of running **PLIGHT_Vis** is provided below:
 ```
 python3 PLIGHT_Vis.py -C chr3 chr6 -t InRef_{}_Best_trajectories.tsv -T Trajectories -P HMM_Plots
 ```
+## PLIGHT_SanitizeGenotypes
+The **PLIGHT_SanitizeGenotypes** module is used to remove the single most informative SNP based on the trajectories from a previous iteration of PLIGHT. After the SNP is removed, a PLIGHT algorithm of the user's choosing is run on the remaining SNPs for comparison. The help menu is as follows:
+
+```
+usage: PLIGHT_SanitizeGenotypes.py [-h] --bftfile BFTFILE --algorithm_type
+                                   {Exact,Iterative,InReference} -c
+                                   CHROMOSOMEFILE -O OBSERVEDSAMPLE
+                                   [-I CHROMOSOMEID] [-m METADATA]
+                                   [-F GENFOLDER] [-M THETAMUTATIONRATE]
+                                   [-L LAMBDAMUTATIONRATE] [-e EFFPOP]
+                                   [-r REFPOP] [-b RECOMBRATE]
+                                   [-s {distance,custom}] [-f RECOMBFILE]
+                                   [-t TOLERANCE] [-C CURRDIR]
+                                   [--numproc NUMPROC] [--subgroup SUBGROUP]
+                                   [--niter NITER] [--posspecific POSSPECIFIC]
+                                   [--prefix PREFIX]
+
+Remove most informative SNP and rerun PLIGHt algorithm of choice
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --bftfile BFTFILE     Best-fit trajectory file from previous run of PLIGHT
+  --algorithm_type {Exact,Iterative,InReference}
+                        Version of PLIGHT to run the post-sanitization
+                        protocol on (Truncated option not included)
+  -c CHROMOSOMEFILE, --chromosomefile CHROMOSOMEFILE
+                        Chromosome file name
+  -O OBSERVEDSAMPLE, --observedsample OBSERVEDSAMPLE
+                        Observed Sample Genotype File
+  -I CHROMOSOMEID, --chromosomeID CHROMOSOMEID
+                        Chromosome ID
+  -m METADATA, --metadata METADATA
+                        Metadata file with ancestry information
+  -F GENFOLDER, --genfolder GENFOLDER
+                        Genotype folder
+  -M THETAMUTATIONRATE, --thetamutationrate THETAMUTATIONRATE
+                        Theta (Coalescent) Mutation rate
+  -L LAMBDAMUTATIONRATE, --lambdamutationrate LAMBDAMUTATIONRATE
+                        Lambda (direct error) Mutation rate
+  -e EFFPOP, --effpop EFFPOP
+                        Effective population
+  -r REFPOP, --refpop REFPOP
+                        Reference population
+  -b RECOMBRATE, --recombrate RECOMBRATE
+                        Recombination rate in cM/Mb (if /distance/ option is
+                        chosen)
+  -s {distance,custom}, --recombswitch {distance,custom}
+                        Recombination Model Switch (distance = simple linear
+                        increase of recombination rate with distance, custom =
+                        alternative model)
+  -f RECOMBFILE, --recombfile RECOMBFILE
+                        Custom Recombination Model File
+  -t TOLERANCE, --tolerance TOLERANCE
+                        Fraction of maximum value used as allowance for
+                        inclusion of a path
+  -C CURRDIR, --currdir CURRDIR
+                        Current working directory
+  --numproc NUMPROC     Number of processes for parallelization
+  --subgroup SUBGROUP   Number of haplotypes in each iterative scheme subgroup
+  --niter NITER         Number of iterations of bootstrapping process
+  --posspecific POSSPECIFIC
+                        Position-specific mutation rates included in
+                        observation file? (True/False)
+  --prefix PREFIX       String prefix to append to output Best_trajectories
+                        file, in addition to chromosome number
+```
+The parameters unique to this method (as opposed to the others which are the sae as for the PLIGHT HMM algorithms) are:
+1. --bftfile BFTFILE: This is the best-fit trajectory file from previous run of PLIGHT, which will be used in determining the most informative SNP.
+2. --algorithm_type {Exact,Iterative,InReference}: This is the algorithm to be run after the SNP has been removed.
+
+The output of the method includes a sanitized SNP list with a ```.Sanitized``` flag appended before the .txt extension.
+
+An example of running **PLIGHT_SanitizeGenotypes** is provided below:
+```
+python3 PLIGHT_SanitizeGenotypes.py --bftfile Exact_chr1_Best_trajectories.tsv --algorithm_type 'Exact'  --metadata integrated_call_samples_v3.20130502.ALL.panel --genfolder Genotypes/ --lambdamutationrate 0.1 --effpop 11418 --refpop 200 --recombrate 0.5 --recombswitch distance --tolerance 0.01 --currdir ./ --numproc 12 --posspecific False -c ALL.chr1.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -O chr1_SNP_list.txt --chromosomeID chr1 --prefix Sanitize_Exact
+```
+
 ## Example data included
 ### Inputs
 We include examples of input SNP lists for both cases of (a) non-position-specific and (b) position-specific mutation rates. See the parameter descriptions above for explanations on how these two input files differ.
