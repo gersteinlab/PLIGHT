@@ -92,6 +92,8 @@ def read_backtrace(prefix, btfilename, termbtcollapse, lhaps, samplelist, snplis
 #*****************************************************************
 #*****************************************************************
 def run_hmm_in_reference(prefix, dsfilename, filename, observedsample, chromID, refpop, recombfile, scaledmutrate, tolerance, numproc, posspecific):
+    indep_p = 0
+    geno_p = 0
     emissionmat = emissionprob(scaledmutrate)
     lowerlimit = sys.float_info.min
 
@@ -199,6 +201,20 @@ def run_hmm_in_reference(prefix, dsfilename, filename, observedsample, chromID, 
             haps = terms[9:refpop+9]
 
             haps = [f"{indhap.split(':')[0].split('/')[0]}|{indhap.split(':')[0].split('/')[1]}" if "/" in indhap.split(':')[0] else indhap.split(':')[0] for indhap in haps]
+            gens = [int(indhap.split("|")[0]) + int(indhap.split("|")[1]) for indhap in haps if "." not in indhap.split("|")]
+            gen_counter = Counter(gens)
+            gen_freq = [gen_counter[0]/float(len(gens)),gen_counter[1]/float(len(gens)),gen_counter[2]/float(len(gens))]
+
+            geno_p += np.log(gen_freq[int(obsgtype)])
+            if int(obsgtype) == 2:
+                SNP_prob = np.log(p1*p1)
+            elif int(obsgtype) == 1:
+                SNP_prob = np.log(2*p1*p0)
+            elif int(obsgtype) == 0:
+                SNP_prob = np.log(p0*p0)
+
+
+            indep_p += SNP_prob
             lhaps = len(haps)
 
             pvec = np.array([math.log(lowerlimit) for i in range(lhaps)], dtype = np.float32)
@@ -222,7 +238,7 @@ def run_hmm_in_reference(prefix, dsfilename, filename, observedsample, chromID, 
 
 
             if si == 0:
-                reflog = -2*math.log(lhaps)
+                reflog = -math.log(lhaps)
                 pvec += reflog
 
             else:
@@ -250,13 +266,20 @@ def run_hmm_in_reference(prefix, dsfilename, filename, observedsample, chromID, 
     infile.close()
     inrecomb.close()
     btfile.close()
-
+    sum_p = termp + np.log(np.sum(np.exp(-termp + pmat)))
+    print(f"Termp = {termp} vs. Indep_p = {indep_p} vs. Sum_p = {sum_p} vs. Geno_p = {geno_p}")
+    outfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
+    outfile.write("Log-Probability value of best-fit trajectories = "+str(termp)+"\n")
+    outfile.write("log(Joint Probability of SNPs) = "+str(sum_p)+"\n")
+    outfile.write(f"log(Product of Independent HWE Probabilities of SNP Genotypes) = {indep_p}\n")
+    outfile.write(f"log(Product of Independent Database-specific Genotype Probabilities of SNP Genotypes) = {geno_p}")
+    outfile.close()
     return btfilename, termbtcollapse, lhaps, samplelist, snplist, chromID
 
 if __name__=="__main__":
   parser = argparse.ArgumentParser(description='Identify closest related reference haplotypes')
   parser.add_argument('-c','--chromosomefile', required=True, help='Chromosome file name')
-  parser.add_argument('-O','--observedsample', required=False, help='Observed Sample Genotype File')
+  parser.add_argument('-O','--observedsample', required=True, help='Observed Sample Genotype File')
   parser.add_argument('-I','--chromosomeID', required=False, help='Chromosome ID')
   parser.add_argument('-m','--metadata', required=False, help='Metadata file with ancestry information', default='integrated_call_samples_v3.20130502.ALL.panel')
   parser.add_argument('-F','--genfolder', required=False, help='Genotype folder', default='Genotypes/')

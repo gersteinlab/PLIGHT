@@ -239,6 +239,8 @@ def read_backtrace(prefix, btfilename, termbtcollapse, lhaps, samplelist, sample
 #*****************************************************************
 #*****************************************************************
 def run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, en_select_sample):
+    indep_p = 0
+    geno_p = 0
     select_index = en_select_sample[0]
     select_sample = en_select_sample[1]
 
@@ -315,10 +317,22 @@ def run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmut
             p0 = 1.0-p1
             haps = terms[9:refpop+9]
             haps = [indhap+"|"+indhap if len(indhap.split("|")) == 1 else indhap for indhap in haps]
+            haps = [f"{indhap.split(':')[0].split('/')[0]}|{indhap.split(':')[0].split('/')[1]}" if "/" in indhap.split(':')[0] else indhap.split(':')[0] for indhap in haps]
+            gens = [int(indhap.split("|")[0]) + int(indhap.split("|")[1]) for indhap in haps if "." not in indhap.split("|")]
+            gen_counter = Counter(gens)
+            gen_freq = [gen_counter[0]/float(len(gens)),gen_counter[1]/float(len(gens)),gen_counter[2]/float(len(gens))]
+
+            geno_p += np.log(gen_freq[int(obsgtype)])
             haps = [item2 for indhap in haps for item in indhap.split(":")[0].split("|") for item2 in item.split("/")]
 
             haps = [haps[ind] for ind in select_sample]
-
+            if int(obsgtype) == 2:
+                SNP_prob = np.log(p1*p1)
+            elif int(obsgtype) == 1:
+                SNP_prob = np.log(2*p1*p0)
+            elif int(obsgtype) == 0:
+                SNP_prob = np.log(p0*p0)
+            indep_p += SNP_prob
             lhaps = len(haps)
 
             #Explicit calculation of emission probabilities for all possibilities
@@ -407,7 +421,10 @@ def run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmut
     infile.close()
     inrecomb.close()
     btfile.close()
-    return termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID
+
+    sum_p = termp + np.log(np.sum(np.exp(-termp + pmat)))
+
+    return geno_p, sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID
 
 #*****************************************************************
 #*****************************************************************
@@ -430,8 +447,8 @@ def iterative_process(prefix, dsfilename, filename, observedsample, refpop, subg
                 random.shuffle(bestlist)
                 select_sample = [bestlist[i*subgroup:(i+1)*subgroup] for i in range((len(bestlist)+subgroup-1) // subgroup)]
             for en_select_sample in enumerate(select_sample):
-                termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, en_select_sample)
-                returnlist = read_backtrace(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
+                geno_p, sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, en_select_sample)
+                returnlist = read_backtrace_iterative(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
                 toplist.extend(returnlist)
         bestlist = list(set(toplist))
         if (set(prevbest) == set(bestlist)) or (len(bestlist) > len(prevbest)):
@@ -439,19 +456,22 @@ def iterative_process(prefix, dsfilename, filename, observedsample, refpop, subg
         prevbest = bestlist
         count += 1
     writeflag = "final"
-    termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, (0,bestlist))
-    read_backtrace(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
-    outfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
-    outfile.write("Probability value of best-fit trajectories = "+str(termp))
+    geno_p, sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, (0,bestlist))
+    read_backtrace_iterative(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
+
+    ooutfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
+    outfile.write("Log-Probability value of best-fit trajectories = "+str(termp)+"\n")
+    outfile.write("log(Joint Probability of SNPs) = "+str(sum_p)+"\n")
+    outfile.write(f"log(Product of Independent HWE Probabilities of SNP Genotypes) = {indep_p}\n")
+    outfile.write(f"log(Product of Independent Database-specific Genotype Probabilities of SNP Genotypes) = {geno_p}\n")
     outfile.close()
     return
-
 #*****************************************************************
 #*****************************************************************
 if __name__=="__main__":
   parser = argparse.ArgumentParser(description='Identify closest related reference haplotypes')
   parser.add_argument('-c','--chromosomefile', required=True, help='Chromosome file name')
-  parser.add_argument('-O','--observedsample', required=False, help='Observed Sample Genotype File')
+  parser.add_argument('-O','--observedsample', required=True, help='Observed Sample Genotype File')
   parser.add_argument('-I','--chromosomeID', required=False, help='Chromosome ID')
   parser.add_argument('-m','--metadata', required=False, help='Metadata file with ancestry information', default='integrated_call_samples_v3.20130502.ALL.panel')
   parser.add_argument('-F','--genfolder', required=False, help='Genotype folder', default='Genotypes/')
@@ -465,7 +485,7 @@ if __name__=="__main__":
   parser.add_argument('-t','--tolerance', required=False, type = float, help='Fraction of maximum value used as allowance for inclusion of a path', default=0.01)
   parser.add_argument('-C','--currdir', required=False, help='Current working directory', default='./')
   parser.add_argument('--numproc', required=False, type = int, help='Number of processes for parallelization', default=1)
-  parser.add_argument('--subgroup', required=False, help='Number of haplotypes in each iterative scheme subgroup', default=200, type=int)
+  parser.add_argument('--subgroup', required=False, help='Number of haplotypes in each iterative scheme subgroup', default=300, type=int)
   parser.add_argument('--niter', required=False, help='Number of iterations of bootstrapping process', default=20, type=int)
   parser.add_argument('--posspecific', required=False, help='Position-specific mutation rates included in observation file? (True/False)', default="False")
   parser.add_argument('--prefix', required=False, help='String prefix to append to output Best_trajectories file, in addition to chromosome number', default="")

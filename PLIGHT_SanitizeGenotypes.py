@@ -11,7 +11,7 @@ import multiprocessing as mp
 from functools import partial
 import gzip
 import mmap
-
+from collections import Counter
 #*****************************************************************
 #*****************************************************************
 def emissionprob(scaledmutrate):
@@ -328,6 +328,7 @@ def read_backtrace_iterative(prefix, btfilename, termbtcollapse, lhaps, sampleli
 #*****************************************************************
 def run_hmm_exact(prefix, dsfilename, filename, observedsample, chromID, refpop, recombfile, scaledmutrate, tolerance, numproc, posspecific):
     indep_p = 0
+    geno_p = 0
     emissionmat = emissionprob(scaledmutrate)
     lowerlimit = sys.float_info.min
 
@@ -448,6 +449,12 @@ def run_hmm_exact(prefix, dsfilename, filename, observedsample, chromID, refpop,
             p0 = 1.0-p1
             haps = terms[9:refpop+9]
             haps = [indhap+"|"+indhap if len(indhap.split("|")) == 1 else indhap for indhap in haps]
+            haps = [f"{indhap.split(':')[0].split('/')[0]}|{indhap.split(':')[0].split('/')[1]}" if "/" in indhap.split(':')[0] else indhap.split(':')[0] for indhap in haps]
+            gens = [int(indhap.split("|")[0]) + int(indhap.split("|")[1]) for indhap in haps if "." not in indhap.split("|")]
+            gen_counter = Counter(gens)
+            gen_freq = [gen_counter[0]/float(len(gens)),gen_counter[1]/float(len(gens)),gen_counter[2]/float(len(gens))]
+
+            geno_p += np.log(gen_freq[int(obsgtype)])
             haps = [item for indhap in haps for item in indhap.split("|")]
 
             if int(obsgtype) == 2:
@@ -555,8 +562,10 @@ def run_hmm_exact(prefix, dsfilename, filename, observedsample, chromID, refpop,
 
     sum_p = termp + np.log(np.sum(np.exp(-termp + pmat)))
     outfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
-    outfile.write("Log-Probability value of best-fit trajectories = "+str(termp))
-    outfile.write("log(Joint Probability of SNPs) - log(Product of Independent HWE Probabilities of SNP Genotypes) = "+str(sum_p - indep_p))
+    outfile.write("Log-Probability value of best-fit trajectories = "+str(termp)+"\n")
+    outfile.write("log(Joint Probability of SNPs) = "+str(sum_p))
+    outfile.write(f"log(Product of Independent HWE Probabilities of SNP Genotypes) = {indep_p}")
+    outfile.write(f"log(Product of Independent Database-specific Genotype Probabilities of SNP Genotypes) = {geno_p}")
     outfile.close()
     #********************
 
@@ -565,6 +574,7 @@ def run_hmm_exact(prefix, dsfilename, filename, observedsample, chromID, refpop,
 #*****************************************************************
 def run_hmm_in_reference(prefix, dsfilename, filename, observedsample, chromID, refpop, recombfile, scaledmutrate, tolerance, numproc, posspecific):
     indep_p = 0
+    geno_p = 0
     emissionmat = emissionprob(scaledmutrate)
     lowerlimit = sys.float_info.min
 
@@ -672,12 +682,19 @@ def run_hmm_in_reference(prefix, dsfilename, filename, observedsample, chromID, 
             haps = terms[9:refpop+9]
 
             haps = [f"{indhap.split(':')[0].split('/')[0]}|{indhap.split(':')[0].split('/')[1]}" if "/" in indhap.split(':')[0] else indhap.split(':')[0] for indhap in haps]
+            gens = [int(indhap.split("|")[0]) + int(indhap.split("|")[1]) for indhap in haps if "." not in indhap.split("|")]
+            gen_counter = Counter(gens)
+            gen_freq = [gen_counter[0]/float(len(gens)),gen_counter[1]/float(len(gens)),gen_counter[2]/float(len(gens))]
+
+            geno_p += np.log(gen_freq[int(obsgtype)])
             if int(obsgtype) == 2:
                 SNP_prob = np.log(p1*p1)
             elif int(obsgtype) == 1:
                 SNP_prob = np.log(2*p1*p0)
             elif int(obsgtype) == 0:
                 SNP_prob = np.log(p0*p0)
+
+
             indep_p += SNP_prob
             lhaps = len(haps)
 
@@ -702,7 +719,7 @@ def run_hmm_in_reference(prefix, dsfilename, filename, observedsample, chromID, 
 
 
             if si == 0:
-                reflog = -2*math.log(lhaps)
+                reflog = -math.log(lhaps)
                 pvec += reflog
 
             else:
@@ -731,15 +748,19 @@ def run_hmm_in_reference(prefix, dsfilename, filename, observedsample, chromID, 
     inrecomb.close()
     btfile.close()
     sum_p = termp + np.log(np.sum(np.exp(-termp + pmat)))
+    print(f"Termp = {termp} vs. Indep_p = {indep_p} vs. Sum_p = {sum_p} vs. Geno_p = {geno_p}")
     outfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
-    outfile.write("Log-Probability value of best-fit trajectories = "+str(termp))
-    outfile.write("log(Joint Probability of SNPs) - log(Product of Independent HWE Probabilities of SNP Genotypes) = "+str(sum_p - indep_p))
+    outfile.write("Log-Probability value of best-fit trajectories = "+str(termp)+"\n")
+    outfile.write("log(Joint Probability of SNPs) = "+str(sum_p))
+    outfile.write(f"log(Product of Independent HWE Probabilities of SNP Genotypes) = {indep_p}")
+    outfile.write(f"log(Product of Independent Database-specific Genotype Probabilities of SNP Genotypes) = {geno_p}")
     outfile.close()
     return btfilename, termbtcollapse, lhaps, samplelist, snplist, chromID
 #*****************************************************************
 #*****************************************************************
 def run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, en_select_sample):
     indep_p = 0
+    geno_p = 0
     select_index = en_select_sample[0]
     select_sample = en_select_sample[1]
 
@@ -816,6 +837,12 @@ def run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmut
             p0 = 1.0-p1
             haps = terms[9:refpop+9]
             haps = [indhap+"|"+indhap if len(indhap.split("|")) == 1 else indhap for indhap in haps]
+            haps = [f"{indhap.split(':')[0].split('/')[0]}|{indhap.split(':')[0].split('/')[1]}" if "/" in indhap.split(':')[0] else indhap.split(':')[0] for indhap in haps]
+            gens = [int(indhap.split("|")[0]) + int(indhap.split("|")[1]) for indhap in haps if "." not in indhap.split("|")]
+            gen_counter = Counter(gens)
+            gen_freq = [gen_counter[0]/float(len(gens)),gen_counter[1]/float(len(gens)),gen_counter[2]/float(len(gens))]
+
+            geno_p += np.log(gen_freq[int(obsgtype)])
             haps = [item2 for indhap in haps for item in indhap.split(":")[0].split("|") for item2 in item.split("/")]
 
             haps = [haps[ind] for ind in select_sample]
@@ -917,7 +944,7 @@ def run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmut
 
     sum_p = termp + np.log(np.sum(np.exp(-termp + pmat)))
 
-    return sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID
+    return geno_p, sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID
 
 #*****************************************************************
 #*****************************************************************
@@ -940,7 +967,7 @@ def iterative_process(prefix, dsfilename, filename, observedsample, refpop, subg
                 random.shuffle(bestlist)
                 select_sample = [bestlist[i*subgroup:(i+1)*subgroup] for i in range((len(bestlist)+subgroup-1) // subgroup)]
             for en_select_sample in enumerate(select_sample):
-                sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, en_select_sample)
+                geno_p, sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, en_select_sample)
                 returnlist = read_backtrace_iterative(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
                 toplist.extend(returnlist)
         bestlist = list(set(toplist))
@@ -949,19 +976,21 @@ def iterative_process(prefix, dsfilename, filename, observedsample, refpop, subg
         prevbest = bestlist
         count += 1
     writeflag = "final"
-    sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, (0,bestlist))
+    geno_p, sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, (0,bestlist))
     read_backtrace_iterative(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
 
-    outfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
-    outfile.write("Log-Probability value of best-fit trajectories = "+str(termp))
-    outfile.write("log(Joint Probability of SNPs) - log(Product of Independent HWE Probabilities of SNP Genotypes) = "+str(sum_p - indep_p))
+    ooutfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
+    outfile.write("Log-Probability value of best-fit trajectories = "+str(termp)+"\n")
+    outfile.write("log(Joint Probability of SNPs) = "+str(sum_p))
+    outfile.write(f"log(Product of Independent HWE Probabilities of SNP Genotypes) = {indep_p}")
+    outfile.write(f"log(Product of Independent Database-specific Genotype Probabilities of SNP Genotypes) = {geno_p}")
     outfile.close()
     return
 
 #*****************************************************************
 #*****************************************************************
 if __name__=="__main__":
-    parser = argparse.ArgumentParser(description='Remove most informative SNP and rerun PLIGHt algorithm of choice')
+    parser = argparse.ArgumentParser(description='Remove most informative SNP and rerun PLIGHT algorithm of choice')
     parser.add_argument('--bftfile', required=True, help='Best-fit trajectory file from previous run of PLIGHT')
     parser.add_argument('--algorithm_type', required=True, choices = ['Exact','Iterative','InReference'], help='Version of PLIGHT to run the post-sanitization protocol on (Truncated option not included)')
     parser.add_argument('-c','--chromosomefile', required=True, help='Chromosome file name')
@@ -983,6 +1012,9 @@ if __name__=="__main__":
     parser.add_argument('--niter', required=False, help='Number of iterations of bootstrapping process', default=20, type=int)
     parser.add_argument('--posspecific', required=False, help='Position-specific mutation rates included in observation file? (True/False)', default="False")
     parser.add_argument('--prefix', required=False, help='String prefix to append to output Best_trajectories file, in addition to chromosome number', default="")
+    parser.add_argument('--filtermethod', required=False, choices = ['PLIGHT', 'MAF'], help='Method to use in filtering out a SNP -- PLIGHT = Filter out based on entropy of inferred trajectories + MAF; MAF = MAF-based filter only', default="PLIGHT")
+    parser.add_argument('--testmode', required=False, choices = ['Yes', 'No'], help='Whether to calculate the occurrence of a sample in the inferred trajectories', default="No")
+
     args = parser.parse_args()
 
     bftfile = args.bftfile
@@ -998,7 +1030,8 @@ if __name__=="__main__":
     numproc = args.numproc
     recombrate = 0.01*args.recombrate
     filename = genfolder + chromfile
-
+    filtermethod = args.filtermethod
+    testmode = args.testmode
     observedsample = args.observedsample
     subgroup = args.subgroup
     niter = args.niter
@@ -1016,56 +1049,123 @@ if __name__=="__main__":
 
     #*****************************************************************
     #*****************************************************************
-    #Read in the current Best-fit trajectories file and figure out the SNPs with the maximum leakage
-    infile = open(bftfile,'r')
 
-    count = 0
-    snplist = []
-    haplength = []
-    for line in infile:
-        terms = line.strip().split("\t")
-        SNP_ID = terms[0]
-        snplist.append(SNP_ID)
-        gens = terms[1:]
-        if count==0:
-            haps = list(set([gen.split("_")[i]+"_"+gen.split("_")[i+1] for gen in gens for i in range(0,3,2)]))
-            haplength.append(len(haps))
+    if filtermethod=="PLIGHT":
+        #Read in the current Best-fit trajectories file and figure out the SNPs with the maximum leakage
+        infile = open(bftfile,'r')
+
+        count = 0
+        snplist = []
+        haplength = []
+        for line in infile:
+            terms = line.strip().split("\t")
+            SNP_ID = terms[0]
+            snplist.append(SNP_ID)
+            gens = terms[1:]
+            if count==0:
+                haps = list(set([gen.split("_")[i]+"_"+gen.split("_")[i+1] for gen in gens for i in range(0,3,2)]))
+                haplength.append(len(haps))
+            else:
+                haps = list(set([nextgen.split("_")[i]+"_"+nextgen.split("_")[i+1] for gen in gens for nextgen in gen.split(":")[1].split(";") for i in range(0,3,2)]))
+                haplength.append(len(haps))
+
+            count += 1
+        infile.close()
+        min_hl = np.min(np.array(haplength))
+        min_SNPs = np.array(snplist)[np.where(np.array(haplength) == min_hl)]
+        print(f"Minimally leaking SNPs: {min_SNPs}")
+        #For the set of maximally leaking SNPs, remove the one with the lowest MAF
+        af_file = f"{prefix}_{chromID}_Observed_AlleleFreq.txt"
+
+        bcfcommand = f"bcftools view -m2 -M2 -v snps -Ov -R {observedsample} {filename} | bcftools query -f '%CHROM\t%POS\t%AF\n' > {af_file}"
+        subprocess.call(bcfcommand,shell=True)
+
+        infile = open(af_file,'r')
+        af_dict = {}
+        for line in infile:
+            terms = line.strip().split("\t")
+            SNP_ID = f"chr{terms[0].strip('chr')}_{terms[1]}"
+            AF = float(terms[2])
+            af_dict[SNP_ID] = AF
+
+        infile.close()
+        min_AFs = np.array([af_dict["_".join(SNP.split("_")[:-1])] for SNP in min_SNPs])
+        most_informative_SNP = min_SNPs[np.where(min_AFs == np.min(min_AFs))][0]
+        print(f"Most informative SNP: {most_informative_SNP}")
+
+        if "Sanitized" in observedsample:
+            previter = int(observedsample.split(".")[-2].split("_")[-1])
+            newname = ".".join(observedsample.split(".")[:-2])+f".PLIGHT_Sanitized_{previter+1}.txt"
+            prefix = f"{prefix}_{previter+1}"
         else:
-            haps = list(set([nextgen.split("_")[i]+"_"+nextgen.split("_")[i+1] for gen in gens for nextgen in gen.split(":")[1].split(";") for i in range(0,3,2)]))
-            haplength.append(len(haps))
+            newname = ".".join(observedsample.split(".")[:-1])+".PLIGHT_Sanitized_1.txt"
+            prefix = f"{prefix}_1"
+        infile = open(observedsample,'r')
+        outfile = open(newname,'w')
+        for line in infile:
+            terms = line.strip().split("\t")
+            SNP_ID = "chr"+terms[0].strip("chr")+"_"+terms[1]
+            if SNP_ID not in most_informative_SNP:
+                outfile.write(line)
+        outfile.close()
+        infile.close()
+    elif filtermethod=="MAF":
+        #Read in the current Best-fit trajectories file and figure out the SNPs with the maximum leakage
+        infile = open(bftfile,'r')
 
-        count += 1
-    infile.close()
-    min_hl = np.min(np.array(haplength))
-    min_SNPs = np.array(snplist)[np.where(np.array(haplength) == min_hl)]
-    print(min_SNPs)
-    #For the set of maximally leaking SNPs, remove the one with the lowest MAF
-    af_file = f"{chromID}_Observed_AlleleFreq.txt"
-    bcfcommand = f"bcftools view -m2 -M2 -v snps -Ov -R {observedsample} {filename} | bcftools query -f '%CHROM\t%POS\t%AF\n' > {af_file}"
-    subprocess.call(bcfcommand,shell=True)
+        count = 0
+        snplist = []
+        haplength = []
+        for line in infile:
+            terms = line.strip().split("\t")
+            SNP_ID = terms[0]
+            snplist.append(SNP_ID)
+            gens = terms[1:]
+            if count==0:
+                haps = list(set([gen.split("_")[i]+"_"+gen.split("_")[i+1] for gen in gens for i in range(0,3,2)]))
+                haplength.append(len(haps))
+            else:
+                haps = list(set([nextgen.split("_")[i]+"_"+nextgen.split("_")[i+1] for gen in gens for nextgen in gen.split(":")[1].split(";") for i in range(0,3,2)]))
+                haplength.append(len(haps))
 
-    infile = open(af_file,'r')
-    af_dict = {}
-    for line in infile:
-        terms = line.strip().split("\t")
-        SNP_ID = f"chr{terms[0].strip('chr')}_{terms[1]}"
-        AF = float(terms[2])
-        af_dict[SNP_ID] = AF
-    infile.close()
-    min_AFs = np.array([af_dict["_".join(SNP.split("_")[:-1])] for SNP in min_SNPs])
-    most_informative_SNP = min_SNPs[np.where(min_AFs == np.min(min_AFs))][0]
-    print(most_informative_SNP)
+            count += 1
+        infile.close()
 
-    newname = ".".join(observedsample.split(".")[:-1])+".Sanitized.txt"
-    infile = open(observedsample,'r')
-    outfile = open(newname,'w')
-    for line in infile:
-        terms = line.strip().split("\t")
-        SNP_ID = "chr"+terms[0].strip("chr")+"_"+terms[1]
-        if SNP_ID not in most_informative_SNP:
-            outfile.write(line)
-    outfile.close()
-    infile.close()
+        min_SNPs = np.array(snplist)
+
+        #Remove the one with the lowest MAF
+        af_file = f"{prefix}_{chromID}_Observed_AlleleFreq.txt"
+        bcfcommand = f"bcftools view -m2 -M2 -v snps -Ov -R {observedsample} {filename} | bcftools query -f '%CHROM\t%POS\t%AF\n' > {af_file}"
+        subprocess.call(bcfcommand,shell=True)
+
+        infile = open(af_file,'r')
+        af_dict = {}
+        for line in infile:
+            terms = line.strip().split("\t")
+            SNP_ID = f"chr{terms[0].strip('chr')}_{terms[1]}"
+            AF = float(terms[2])
+            af_dict[SNP_ID] = AF
+        infile.close()
+        min_AFs = np.array([af_dict["_".join(SNP.split("_")[:-1])] for SNP in min_SNPs])
+        most_informative_SNP = min_SNPs[np.where(min_AFs == np.min(min_AFs))][0]
+        print(f"Most informative SNP: {most_informative_SNP}")
+
+        if "Sanitized" in observedsample:
+            previter = int(observedsample.split(".")[-2].split("_")[-1])
+            newname = ".".join(observedsample.split(".")[:-2])+f".MAF_Sanitized_{previter+1}.txt"
+            prefix = f"{prefix}_{previter+1}"
+        else:
+            newname = ".".join(observedsample.split(".")[:-1])+".MAF_Sanitized_1.txt"
+            prefix = f"{prefix}_1"
+        infile = open(observedsample,'r')
+        outfile = open(newname,'w')
+        for line in infile:
+            terms = line.strip().split("\t")
+            SNP_ID = "chr"+terms[0].strip("chr")+"_"+terms[1]
+            if SNP_ID not in most_informative_SNP:
+                outfile.write(line)
+        outfile.close()
+        infile.close()
     observedsample = newname
     #*****************************************************************
     #*****************************************************************
@@ -1078,6 +1178,7 @@ if __name__=="__main__":
     if algorithm_type == 'Exact':
         btfilename, termbtcollapse, lhaps, samplelist, snplist, chromID = run_hmm_exact(prefix, dsfilename, filename, observedsample, chromID, refpop, recombfile, scaledmutrate, tolerance, numproc, posspecific)
         trajfile = read_backtrace_exact(prefix, btfilename, termbtcollapse, lhaps, samplelist, snplist, chromID)
+
     elif algorithm_type == 'Iterative':
         iterative_process(prefix, dsfilename, filename, observedsample, refpop, subgroup, chromID, recombfile, scaledmutrate, tolerance, numproc, niter, posspecific)
     elif algorithm_type == 'InReference':
