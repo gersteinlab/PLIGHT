@@ -11,6 +11,7 @@ import multiprocessing as mp
 from functools import partial
 import gzip
 import mmap
+from collections import Counter
 #*****************************************************************
 #*****************************************************************
 def update_func(pmat, lhaps, delta, tolerance, index_tuple):
@@ -448,7 +449,7 @@ def iterative_process(prefix, dsfilename, filename, observedsample, refpop, subg
                 select_sample = [bestlist[i*subgroup:(i+1)*subgroup] for i in range((len(bestlist)+subgroup-1) // subgroup)]
             for en_select_sample in enumerate(select_sample):
                 geno_p, sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, en_select_sample)
-                returnlist = read_backtrace_iterative(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
+                returnlist = read_backtrace(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
                 toplist.extend(returnlist)
         bestlist = list(set(toplist))
         if (set(prevbest) == set(bestlist)) or (len(bestlist) > len(prevbest)):
@@ -457,9 +458,9 @@ def iterative_process(prefix, dsfilename, filename, observedsample, refpop, subg
         count += 1
     writeflag = "final"
     geno_p, sum_p, indep_p, termp, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, chromID = run_hmm_iterative(prefix, dsfilename, chromID, refpop, recombfile, scaledmutrate, tolerance, nsnps, obsgtypelist, mutratelist, numproc, (0,bestlist))
-    read_backtrace_iterative(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
+    read_backtrace(prefix, btfilename, termbtcollapse, lhaps, samplelist, samplelisttot, snplist, chromID, writeflag)
 
-    ooutfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
+    outfile = open(prefix+"_"+str(chromID)+"_Probability_value.txt",'w')
     outfile.write("Log-Probability value of best-fit trajectories = "+str(termp)+"\n")
     outfile.write("log(Joint Probability of SNPs) = "+str(sum_p)+"\n")
     outfile.write(f"log(Product of Independent HWE Probabilities of SNP Genotypes) = {indep_p}\n")

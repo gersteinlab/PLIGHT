@@ -7,6 +7,7 @@ import time
 import random
 from copy import deepcopy
 import argparse
+from collections import Counter
 import multiprocessing as mp
 from functools import partial
 import gzip

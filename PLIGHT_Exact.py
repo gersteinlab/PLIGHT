@@ -9,6 +9,7 @@ from copy import deepcopy
 import argparse
 import multiprocessing as mp
 from functools import partial
+from collections import Counter
 import gzip
 import mmap
 
