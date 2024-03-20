@@ -8,7 +8,7 @@
 Inspired by imputation methods such as *IMPUTE2* [[1]](#1) and *Eagle* [[2]](#2), the inference procedure in **PLIGHT** is based on the Li-Stephens model [[3]](#3), where an HMM is used to explore the space of underlying pairs of haplotypes in a diploid genome with the possibility of de novo mutations and recombination between haplotypes. A solution to the inference problem consists of a set of best-fit haplotype pairs at each observed locus, each pair being linked to another pair at the next locus, to form a set of piecewise matches to reference haplotypes. If multiple equally likely solutions exist, the method identifies all of them.  Collectively, these form a set of genotypic trajectories through reference haplotype space, where a trajectory is defined as a sequence of reference haplotype pairs (for a diploid genome) at each locus that best fit the observations.
 
 For further details about the method and application cases, please refer to:
-> Emani, P.S.; Geradi, M.N.; Gürsoy, G.; Grasty, M.R.; Miranker, A.; Gerstein, M.B. Assessing and mitigating privacy risks of sparse, noisy genotypes by local alignment to haplotype databases *Genome Res.* 2023. 33: 2156-2173. doi:
+> Emani, P.S.; Geradi, M.N.; Gürsoy, G.; Grasty, M.R.; Miranker, A.; Gerstein, M.B. Assessing and mitigating privacy risks of sparse, noisy genotypes by local alignment to haplotype databases. *Genome Res.* 2023. 33: 2156-2173. doi:
 10.1101/gr.278322.123
 
 ## Software Requirements
